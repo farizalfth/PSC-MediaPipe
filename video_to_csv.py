@@ -67,7 +67,10 @@ writer_video = cv2.VideoWriter(
 # ======================================================
 # CSV
 # ======================================================
-csv_path = "video_hand_landmark.csv"
+csv_folder = "hasil_csv"
+os.makedirs(csv_folder, exist_ok=True)
+
+csv_path = os.path.join(csv_folder, "video_hand_landmark.csv")
 
 with open(csv_path, "w", newline="") as csv_file:
 

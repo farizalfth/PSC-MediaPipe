@@ -25,8 +25,14 @@ detector = vision.HandLandmarker.create_from_options(options)
 # ======================================================
 input_folder = "dataset/gambar"
 output_folder = "dataset/hasil"
+csv_folder = "hasil_csv"
 
+# Membuat folder jika belum ada
 os.makedirs(output_folder, exist_ok=True)
+os.makedirs(csv_folder, exist_ok=True)
+
+# Path file CSV
+csv_path = os.path.join(csv_folder, "image_hand_landmark.csv")
 
 # ======================================================
 # KONEKSI LANDMARK TANGAN
@@ -43,7 +49,7 @@ HAND_CONNECTIONS = [
 # ======================================================
 # MEMBUAT CSV
 # ======================================================
-with open("image_hand_landmark.csv", "w", newline="") as csv_file:
+with open(csv_path, "w", newline="") as csv_file:
 
     writer = csv.writer(csv_file)
 
@@ -158,6 +164,6 @@ cv2.destroyAllWindows()
 
 print("\n" + "=" * 50)
 print("SELESAI")
-print("CSV        : image_hand_landmark.csv")
-print(f"Hasil Gambar : {output_folder}")
+print(f"CSV            : {csv_path}")
+print(f"Hasil Gambar   : {output_folder}")
 print("=" * 50)
