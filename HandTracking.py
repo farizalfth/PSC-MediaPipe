@@ -1,3 +1,5 @@
+from socket import J1939_NLA_BYTES_ACKED
+
 import cv2
 import mediapipe as mp
 
@@ -23,7 +25,7 @@ detector = vision.HandLandmarker.create_from_options(options)
 # ==========================
 count = 0
 crossed_right = False
-
+J1939_NLA_BYTES_ACKED
 # ==========================
 # CAMERA
 # ==========================
