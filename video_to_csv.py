@@ -21,15 +21,17 @@ options = vision.HandLandmarkerOptions(
 detector = vision.HandLandmarker.create_from_options(options)
 
 # ======================================================
-# FOLDER
+# PATH
 # ======================================================
-input_folder = "dataset/gambar"
+video_path = "dataset/video/hand.mp4"
 output_folder = "dataset/hasil"
 
 os.makedirs(output_folder, exist_ok=True)
 
+output_video = os.path.join(output_folder, "hand_result.mp4")
+
 # ======================================================
-# KONEKSI LANDMARK TANGAN
+# HAND CONNECTIONS
 # ======================================================
 HAND_CONNECTIONS = [
     (0,1),(1,2),(2,3),(3,4),
@@ -41,13 +43,37 @@ HAND_CONNECTIONS = [
 ]
 
 # ======================================================
-# MEMBUAT CSV
+# VIDEO
 # ======================================================
-with open("hand_landmark.csv", "w", newline="") as csv_file:
+cap = cv2.VideoCapture(video_path)
+
+if not cap.isOpened():
+    print("Video tidak ditemukan.")
+    exit()
+
+width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+fps = cap.get(cv2.CAP_PROP_FPS)
+
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+
+writer_video = cv2.VideoWriter(
+    output_video,
+    fourcc,
+    fps,
+    (width, height)
+)
+
+# ======================================================
+# CSV
+# ======================================================
+csv_path = "video_hand_landmark.csv"
+
+with open(csv_path, "w", newline="") as csv_file:
 
     writer = csv.writer(csv_file)
 
-    header = ["gambar"]
+    header = ["frame"]
 
     for i in range(21):
         header.extend([
@@ -58,43 +84,34 @@ with open("hand_landmark.csv", "w", newline="") as csv_file:
 
     writer.writerow(header)
 
-    print("=" * 50)
-    print("Mulai memproses dataset...")
-    print("=" * 50)
+    frame_number = 0
 
-    # ==================================================
-    # PROSES SEMUA GAMBAR
-    # ==================================================
-    for nama_file in sorted(os.listdir(input_folder)):
+    print("Memproses video...")
 
-        if not nama_file.lower().startswith("tangan"):
-            continue
+    while True:
 
-        image_path = os.path.join(input_folder, nama_file)
+        ret, frame = cap.read()
 
-        # MediaPipe Image
-        mp_image = mp.Image.create_from_file(image_path)
+        if not ret:
+            break
 
-        # Deteksi
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        mp_image = mp.Image(
+            image_format=mp.ImageFormat.SRGB,
+            data=rgb
+        )
+
         result = detector.detect(mp_image)
-
-        # OpenCV Image
-        img = cv2.imread(image_path)
-
-        if img is None:
-            print(f"Gagal membuka {nama_file}")
-            continue
-
-        h, w, _ = img.shape
 
         if result.hand_landmarks:
 
             hand = result.hand_landmarks[0]
 
             # ==========================
-            # SIMPAN KE CSV
+            # Simpan CSV
             # ==========================
-            row = [nama_file]
+            row = [frame_number]
 
             for lm in hand:
                 row.extend([lm.x, lm.y, lm.z])
@@ -102,62 +119,66 @@ with open("hand_landmark.csv", "w", newline="") as csv_file:
             writer.writerow(row)
 
             # ==========================
-            # GAMBAR GARIS
+            # Titik pixel
             # ==========================
             points = []
 
             for lm in hand:
-                px = int(lm.x * w)
-                py = int(lm.y * h)
+                px = int(lm.x * width)
+                py = int(lm.y * height)
                 points.append((px, py))
 
+            # ==========================
+            # Gambar garis
+            # ==========================
             for start, end in HAND_CONNECTIONS:
+
                 cv2.line(
-                    img,
+                    frame,
                     points[start],
                     points[end],
-                    (0, 255, 0),
+                    (0,255,0),
                     2
                 )
 
             # ==========================
-            # GAMBAR TITIK
+            # Gambar titik
             # ==========================
-            for point in points:
+            for p in points:
+
                 cv2.circle(
-                    img,
-                    point,
-                    5,
-                    (0, 0, 255),
+                    frame,
+                    p,
+                    4,
+                    (0,0,255),
                     -1
                 )
 
-            # ==========================
-            # SIMPAN HASIL
-            # ==========================
-            output_path = os.path.join(
-                output_folder,
-                f"{os.path.splitext(nama_file)[0]}_result.jpg"
-            )
+        # ==========================
+        # Simpan video
+        # ==========================
+        writer_video.write(frame)
 
-            cv2.imwrite(output_path, img)
+        # ==========================
+        # Resize tampilan
+        # ==========================
+        display = cv2.resize(frame, (700, 450))
 
-            # ==========================
-            # TAMPILKAN
-            # ==========================
-            cv2.imshow("Hand Landmark Detection", img)
-            cv2.waitKey(0)
+        cv2.imshow("Hand Video Detection", display)
 
-            print(f"✓ {nama_file} berhasil diproses")
-            print(f"  -> {output_path}")
+        frame_number += 1
 
-        else:
-            print(f"✗ Tidak ada tangan pada {nama_file}")
+        key = cv2.waitKey(1)
 
+        if key == ord("q"):
+            break
+
+cap.release()
+writer_video.release()
 cv2.destroyAllWindows()
 
-print("\n" + "=" * 50)
+print("="*50)
 print("SELESAI")
-print("CSV        : hand_landmark.csv")
-print(f"Hasil Gambar : {output_folder}")
-print("=" * 50)
+print(f"CSV      : {csv_path}")
+print(f"VIDEO    : {output_video}")
+print("="*50)
